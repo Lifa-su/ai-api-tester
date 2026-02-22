@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AI API Tester</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{--bg:#1e1e2e;--surface:#2a2a3c;--surface2:#353548;--border:#404060;--text:#cdd6f4;--text2:#a6adc8;--accent:#89b4fa;--accent2:#74c7ec;--green:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--orange:#fab387;--purple:#cba6f7;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,0.3)}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+button{cursor:pointer;border:none;font-family:inherit;font-size:inherit}
+input,textarea,select{font-family:inherit;font-size:inherit;background:var(--surface);color:var(--text);border:1px solid var(--border);border-radius:var(--radius);padding:8px 12px;outline:none;transition:border-color .2s}
+input:focus,textarea:focus,select:focus{border-color:var(--accent)}
+textarea{resize:vertical}
+.header{background:var(--surface);padding:12px 24px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border)}
+.header h1{font-size:20px;font-weight:700;background:linear-gradient(135deg,var(--accent),var(--purple));-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.header .subtitle{font-size:12px;color:var(--text2);margin-left:12px}
+.settings-btn{background:var(--surface2);color:var(--text2);padding:6px 14px;border-radius:var(--radius);font-size:13px;transition:all .2s}
+.settings-btn:hover{background:var(--border);color:var(--text)}
+.main{flex:1;display:flex;overflow:hidden}
+.sidebar{width:280px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.sidebar-header{padding:12px 16px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.sidebar-header h3{font-size:14px;color:var(--text2)}
+.clear-btn{background:none;color:var(--red);font-size:12px;padding:4px 8px;border-radius:4px;transition:background .2s}
+.clear-btn:hover{background:rgba(243,139,168,0.1)}
+.history-list{flex:1;overflow-y:auto;padding:8px}
+.history-item{padding:10px 12px;border-radius:var(--radius);cursor:pointer;margin-bottom:4px;transition:background .2s}
+.history-item:hover{background:var(--surface2)}
+.history-item.active{background:var(--surface2);border-left:3px solid var(--accent)}
+.history-item .method{font-size:11px;font-weight:700;padding:2px 6px;border-radius:4px;margin-right:6px}
+.history-item .url{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:block;margin-top:4px}
+.history-item .time{font-size:11px;color:var(--text2);opacity:0.6;margin-top:2px}
+.method-get{background:rgba(166,227,161,0.15);color:var(--green)}
+.method-post{background:rgba(250,179,135,0.15);color:var(--orange)}
+.method-put{background:rgba(137,180,250,0.15);color:var(--accent)}
+.method-delete{background:rgba(243,139,168,0.15);color:var(--red)}
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.request-bar{padding:16px 24px;background:var(--surface);border-bottom:1px solid var(--border)}
+.url-row{display:flex;gap:8px;align-items:center}
+.method-select{width:110px;padding:10px 12px;font-weight:700;font-size:14px;border-radius:var(--radius) 0 0 var(--radius);border-right:none}
+.url-input{flex:1;padding:10px 14px;font-size:14px;border-radius:0}
+.send-btn{padding:10px 24px;background:var(--accent);color:var(--bg);font-weight:700;border-radius:0 var(--radius) var(--radius) 0;font-size:14px;transition:background .2s;white-space:nowrap}
+.send-btn:hover{background:var(--accent2)}
+.send-btn:disabled{opacity:0.5;cursor:not-allowed}
+.ai-row{display:flex;gap:8px;margin-top:10px;align-items:center}
+.ai-input{flex:1;padding:8px 12px;font-size:13px}
+.ai-btn{padding:8px 16px;background:var(--purple);color:var(--bg);font-weight:600;border-radius:var(--radius);font-size:13px;transition:all .2s;white-space:nowrap}
+.ai-btn:hover{opacity:0.85}
+.ai-btn:disabled{opacity:0.5;cursor:not-allowed}
+.panels{flex:1;display:flex;overflow:hidden}
+.panel{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.panel+.panel{border-left:1px solid var(--border)}
+.panel-tabs{display:flex;padding:0 16px;background:var(--surface);border-bottom:1px solid var(--border)}
+.panel-tab{padding:10px 16px;font-size:13px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:all .2s}
+.panel-tab:hover{color:var(--text)}
+.panel-tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.panel-content{flex:1;overflow-y:auto;padding:16px}
+.kv-table{width:100%}
+.kv-row{display:flex;gap:8px;margin-bottom:6px;align-items:center}
+.kv-row input{flex:1;padding:6px 10px;font-size:13px}
+.kv-row .remove-btn{background:none;color:var(--red);font-size:16px;padding:4px 8px;border-radius:4px;opacity:0.6;transition:opacity .2s}
+.kv-row .remove-btn:hover{opacity:1}
+.add-row-btn{background:none;color:var(--accent);font-size:13px;padding:6px 0;transition:opacity .2s}
+.add-row-btn:hover{opacity:0.8}
+.body-editor{width:100%;min-height:200px;font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:13px;line-height:1.6;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);color:var(--text)}
+.response-status{padding:12px 16px;background:var(--surface);display:flex;align-items:center;gap:16px;font-size:13px;border-bottom:1px solid var(--border)}
+.status-badge{padding:4px 10px;border-radius:4px;font-weight:700;font-size:12px}
+.status-2xx{background:rgba(166,227,161,0.15);color:var(--green)}
+.status-3xx{background:rgba(137,180,250,0.15);color:var(--accent)}
+.status-4xx{background:rgba(250,179,135,0.15);color:var(--orange)}
+.status-5xx{background:rgba(243,139,168,0.15);color:var(--red)}
+.response-body{flex:1;overflow:auto;padding:16px}
+.response-body pre{font-family:'SF Mono',Monaco,'Cascadia Code',monospace;font-size:13px;line-height:1.6;white-space:pre-wrap;word-break:break-all}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;color:var(--text2);font-size:14px;gap:8px}
+.empty-state .icon{font-size:48px;opacity:0.3}
+.loading{display:inline-block;width:16px;height:16px;border:2px solid var(--text2);border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity .2s}
+.modal-overlay.show{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:12px;padding:24px;width:420px;max-width:90vw;box-shadow:var(--shadow)}
+.modal h3{margin-bottom:16px;font-size:16px}
+.modal label{display:block;font-size:13px;color:var(--text2);margin-bottom:4px;margin-top:12px}
+.modal input{width:100%;margin-bottom:4px}
+.modal .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:20px}
+.modal .btn-cancel{padding:8px 16px;background:var(--surface2);color:var(--text);border-radius:var(--radius);transition:background .2s}
+.modal .btn-cancel:hover{background:var(--border)}
+.modal .btn-save{padding:8px 16px;background:var(--accent);color:var(--bg);font-weight:600;border-radius:var(--radius);transition:background .2s}
+.modal .btn-save:hover{background:var(--accent2)}
+.ai-suggestions{margin-top:12px;padding:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);font-size:13px;max-height:200px;overflow-y:auto;display:none}
+.ai-suggestions .suggestion{padding:8px;border-radius:4px;cursor:pointer;margin-bottom:4px;transition:background .2s;border:1px solid var(--border)}
+.ai-suggestions .suggestion:hover{background:var(--surface2)}
+.ai-suggestions .suggestion .s-method{font-weight:700;font-size:11px;margin-right:6px}
+.ai-suggestions .suggestion .s-desc{color:var(--text2);font-size:12px;display:block;margin-top:2px}
+.json-key{color:var(--accent)}
+.json-string{color:var(--green)}
+.json-number{color:var(--orange)}
+.json-boolean{color:var(--purple)}
+.json-null{color:var(--red)}
+</style>
+</head>
+<body>
+<div class="header">
+  <div style="display:flex;align-items:baseline">
+    <h1>🚀 AI API Tester</h1>
+    <span class="subtitle">AI-Powered REST API Testing Tool</span>
+  </div>
+  <button class="settings-btn" onclick="toggleSettings()">⚙️ Settings</button>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-header">
+      <h3>📋 History</h3>
+      <button class="clear-btn" onclick="clearHistory()">Clear All</button>
+    </div>
+    <div class="history-list" id="historyList"></div>
+  </div>
+  <div class="content">
+    <div class="request-bar">
+      <div class="url-row">
+        <select class="method-select" id="methodSelect">
+          <option value="GET">GET</option>
+          <option value="POST">POST</option>
+          <option value="PUT">PUT</option>
+          <option value="DELETE">DELETE</option>
+        </select>
+        <input class="url-input" id="urlInput" type="text" placeholder="Enter request URL, e.g. https://api.example.com/users">
+        <button class="send-btn" id="sendBtn" onclick="sendRequest()">Send</button>
+      </div>
+      <div class="ai-row">
+        <input class="ai-input" id="aiInput" type="text" placeholder="Describe your API, e.g. 'User registration API with email and password'">
+        <button class="ai-btn" id="aiBtn" onclick="aiGenerate()">🤖 AI Generate</button>
+      </div>
+      <div class="ai-suggestions" id="aiSuggestions"></div>
+    </div>
+    <div class="panels">
+      <div class="panel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" data-tab="params" onclick="switchReqTab(this)">Params</div>
+          <div class="panel-tab" data-tab="headers" onclick="switchReqTab(this)">Headers</div>
+          <div class="panel-tab" data-tab="body" onclick="switchReqTab(this)">Body</div>
+        </div>
+        <div class="panel-content" id="reqParams">
+          <div class="kv-table" id="paramsTable"></div>
+          <button class="add-row-btn" onclick="addKvRow('paramsTable')">+ Add Param</button>
+        </div>
+        <div class="panel-content" id="reqHeaders" style="display:none">
+          <div class="kv-table" id="headersTable"></div>
+          <button class="add-row-btn" onclick="addKvRow('headersTable')">+ Add Header</button>
+        </div>
+        <div class="panel-content" id="reqBody" style="display:none">
+          <textarea class="body-editor" id="bodyEditor" placeholder='{"key": "value"}'></textarea>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-tabs">
+          <div class="panel-tab active" data-tab="response">Response</div>
+        </div>
+        <div id="responseStatus" class="response-status" style="display:none"></div>
+        <div class="response-body" id="responseBody">
+          <div class="empty-state">
+            <div class="icon">📡</div>
+            <div>Send a request to see the response</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="settingsModal">
+  <div class="modal">
+    <h3>⚙️ Settings</h3>
+    <label>DeepSeek API Key</label>
+    <input type="password" id="apiKeyInput" placeholder="sk-...">
+    <label>API Base URL</label>
+    <input type="text" id="apiBaseInput" placeholder="https://api.deepseek.com">
+    <label>Model</label>
+    <input type="text" id="modelInput" placeholder="deepseek-chat">
+    <div class="modal-actions">
+      <button class="btn-cancel" onclick="toggleSettings()">Cancel</button>
+      <button class="btn-save" onclick="saveSettings()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// State
+let history = JSON.parse(localStorage.getItem('api-tester-history') || '[]');
+let settings = JSON.parse(localStorage.getItem('api-tester-settings') || '{}');
+if (!settings.apiBase) settings.apiBase = 'https://api.deepseek.com';
+if (!settings.model) settings.model = 'deepseek-chat';
+
+// Init
+function init() {
+  addKvRow('paramsTable');
+  addKvRow('headersTable');
+  document.getElementById('headersTable').querySelector('.kv-row input:first-child').value = 'Content-Type';
+  document.getElementById('headersTable').querySelector('.kv-row input:nth-child(2)').value = 'application/json';
+  renderHistory();
+}
+
+// KV Table
+function addKvRow(tableId, key = '', value = '') {
+  const table = document.getElementById(tableId);
+  const row = document.createElement('div');
+  row.className = 'kv-row';
+  row.innerHTML = `<input type="text" placeholder="Key" value="${escHtml(key)}"><input type="text" placeholder="Value" value="${escHtml(value)}"><button class="remove-btn" onclick="this.parentElement.remove()">×</button>`;
+  table.appendChild(row);
+}
+
+function getKvData(tableId) {
+  const rows = document.getElementById(tableId).querySelectorAll('.kv-row');
+  const data = {};
+  rows.forEach(r => {
+    const inputs = r.querySelectorAll('input');
+    const k = inputs[0].value.trim(), v = inputs[1].value.trim();
+    if (k) data[k] = v;
+  });
+  return data;
+}
+
+function setKvData(tableId, data) {
+  const table = document.getElementById(tableId);
+  table.innerHTML = '';
+  if (data && Object.keys(data).length) {
+    Object.entries(data).forEach(([k, v]) => addKvRow(tableId, k, v));
+  } else {
+    addKvRow(tableId);
+  }
+}
+
+// Tabs
+function switchReqTab(el) {
+  el.parentElement.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  const tab = el.dataset.tab;
+  document.getElementById('reqParams').style.display = tab === 'params' ? '' : 'none';
+  document.getElementById('reqHeaders').style.display = tab === 'headers' ? '' : 'none';
+  document.getElementById('reqBody').style.display = tab === 'body' ? '' : 'none';
+}
+
+// Settings
+function toggleSettings() {
+  const modal = document.getElementById('settingsModal');
+  const show = !modal.classList.contains('show');
+  if (show) {
+    document.getElementById('apiKeyInput').value = settings.apiKey || '';
+    document.getElementById('apiBaseInput').value = settings.apiBase;
+    document.getElementById('modelInput').value = settings.model;
+  }
+  modal.classList.toggle('show');
+}
+
+function saveSettings() {
+  settings.apiKey = document.getElementById('apiKeyInput').value.trim();
+  settings.apiBase = document.getElementById('apiBaseInput').value.trim() || 'https://api.deepseek.com';
+  settings.model = document.getElementById('modelInput').value.trim() || 'deepseek-chat';
+  localStorage.setItem('api-tester-settings', JSON.stringify(settings));
+  toggleSettings();
+}
+
+// Send Request
+async function sendRequest() {
+  const method = document.getElementById('methodSelect').value;
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) { alert('Please enter a URL'); return; }
+
+  const btn = document.getElementById('sendBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span>';
+
+  const headers = getKvData('headersTable');
+  const params = getKvData('paramsTable');
+  let fullUrl = url;
+  const qs = new URLSearchParams(params).toString();
+  if (qs) fullUrl += (url.includes('?') ? '&' : '?') + qs;
+
+  const fetchOpts = { method, headers };
+  if (['POST', 'PUT'].includes(method)) {
+    fetchOpts.body = document.getElementById('bodyEditor').value;
+  }
+
+  const startTime = Date.now();
+  try {
+    const resp = await fetch(fullUrl, fetchOpts);
+    const elapsed = Date.now() - startTime;
+    const respHeaders = {};
+    resp.headers.forEach((v, k) => { respHeaders[k] = v; });
+    let bodyText = await resp.text();
+    let bodyJson = null;
+    try { bodyJson = JSON.parse(bodyText); } catch(e) {}
+
+    showResponse(resp.status, resp.statusText, elapsed, respHeaders, bodyJson !== null ? bodyJson : bodyText);
+    addToHistory(method, url, params, headers, document.getElementById('bodyEditor').value, resp.status, elapsed, bodyJson !== null ? bodyJson : bodyText);
+  } catch (err) {
+    showError(err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send';
+  }
+}
+
+function showResponse(status, statusText, time, headers, body) {
+  const statusDiv = document.getElementById('responseStatus');
+  statusDiv.style.display = 'flex';
+  const cls = status < 300 ? 'status-2xx' : status < 400 ? 'status-3xx' : status < 500 ? 'status-4xx' : 'status-5xx';
+  statusDiv.innerHTML = `<span class="status-badge ${cls}">${status} ${statusText}</span><span style="color:var(--text2)">Time: ${time}ms</span>`;
+
+  const bodyDiv = document.getElementById('responseBody');
+  if (typeof body === 'object') {
+    bodyDiv.innerHTML = `<pre>${syntaxHighlight(JSON.stringify(body, null, 2))}</pre>`;
+  } else {
+    bodyDiv.innerHTML = `<pre>${escHtml(body)}</pre>`;
+  }
+}
+
+function showError(msg) {
+  document.getElementById('responseStatus').style.display = 'none';
+  document.getElementById('responseBody').innerHTML = `<div class="empty-state"><div class="icon">❌</div><div style="color:var(--red)">${escHtml(msg)}</div></div>`;
+}
+
+// JSON Syntax Highlighting
+function syntaxHighlight(json) {
+  return json.replace(/("(\\u[a-zA-Z0-9]{4}|\\[^u]|[^\\"])*"(\s*:)?|\b(true|false|null)\b|-?\d+(?:\.\d*)?(?:[eE][+\-]?\d+)?)/g, match => {
+    let cls = 'json-number';
+    if (/^"/.test(match)) {
+      cls = /:$/.test(match) ? 'json-key' : 'json-string';
+    } else if (/true|false/.test(match)) {
+      cls = 'json-boolean';
+    } else if (/null/.test(match)) {
+      cls = 'json-null';
+    }
+    return `<span class="${cls}">${escHtml(match)}</span>`;
+  });
+}
+
+// History
+function addToHistory(method, url, params, headers, body, status, time, response) {
+  const item = { method, url, params, headers, body, status, time, response, timestamp: Date.now() };
+  history.unshift(item);
+  if (history.length > 50) history = history.slice(0, 50);
+  localStorage.setItem('api-tester-history', JSON.stringify(history));
+  renderHistory();
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) {
+    list.innerHTML = '<div class="empty-state" style="padding:24px"><div class="icon">📭</div><div>No history yet</div></div>';
+    return;
+  }
+  list.innerHTML = history.map((h, i) => `
+    <div class="history-item" onclick="loadHistory(${i})">
+      <span class="method method-${h.method.toLowerCase()}">${h.method}</span>
+      <span class="url">${escHtml(h.url)}</span>
+      <span class="time">${new Date(h.timestamp).toLocaleString()} · ${h.status} · ${h.time}ms</span>
+    </div>
+  `).join('');
+}
+
+function loadHistory(idx) {
+  const h = history[idx];
+  document.getElementById('methodSelect').value = h.method;
+  document.getElementById('urlInput').value = h.url;
+  setKvData('paramsTable', h.params);
+  setKvData('headersTable', h.headers);
+  document.getElementById('bodyEditor').value = h.body || '';
+  if (h.response) {
+    const cls = h.status < 300 ? 'status-2xx' : h.status < 400 ? 'status-3xx' : h.status < 500 ? 'status-4xx' : 'status-5xx';
+    document.getElementById('responseStatus').style.display = 'flex';
+    document.getElementById('responseStatus').innerHTML = `<span class="status-badge ${cls}">${h.status}</span><span style="color:var(--text2)">Time: ${h.time}ms</span>`;
+    const bodyDiv = document.getElementById('responseBody');
+    if (typeof h.response === 'object') {
+      bodyDiv.innerHTML = `<pre>${syntaxHighlight(JSON.stringify(h.response, null, 2))}</pre>`;
+    } else {
+      bodyDiv.innerHTML = `<pre>${escHtml(h.response)}</pre>`;
+    }
+  }
+  document.querySelectorAll('.history-item').forEach((el, i) => el.classList.toggle('active', i === idx));
+}
+
+function clearHistory() {
+  if (!confirm('Clear all history?')) return;
+  history = [];
+  localStorage.removeItem('api-tester-history');
+  renderHistory();
+}
+
+// AI Generate
+async function aiGenerate() {
+  const desc = document.getElementById('aiInput').value.trim();
+  if (!desc) { alert('Please describe your API first'); return; }
+  if (!settings.apiKey) { alert('Please set your DeepSeek API Key in Settings'); toggleSettings(); return; }
+
+  const btn = document.getElementById('aiBtn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="loading"></span> Generating...';
+
+  const prompt = `You are an API testing expert. Based on the following API description, generate test cases.
+
+API Description: ${desc}
+
+Return a JSON array of test cases. Each test case should have:
+- method: HTTP method (GET/POST/PUT/DELETE)
+- url: Full URL or URL template (use placeholder like {baseUrl})
+- headers: Object of headers
+- params: Object of query parameters
+- body: Request body string (JSON) if applicable
+- description: Brief description of this test case
+
+Generate 3-5 practical test cases covering normal and edge cases. Return ONLY the JSON array, no markdown.`;
+
+  try {
+    const resp = await fetch(`${settings.apiBase}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${settings.apiKey}` },
+      body: JSON.stringify({ model: settings.model, messages: [{ role: 'user', content: prompt }], temperature: 0.7 })
+    });
+    const data = await resp.json();
+    if (data.error) throw new Error(data.error.message);
+    const content = data.choices[0].message.content.trim();
+    let cases;
+    try {
+      const jsonStr = content.replace(/^```json?\n?/, '').replace(/\n?```$/, '');
+      cases = JSON.parse(jsonStr);
+    } catch(e) {
+      throw new Error('Failed to parse AI response: ' + content.substring(0, 200));
+    }
+    showSuggestions(cases);
+  } catch (err) {
+    alert('AI Error: ' + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '🤖 AI Generate';
+  }
+}
+
+function showSuggestions(cases) {
+  const div = document.getElementById('aiSuggestions');
+  div.style.display = 'block';
+  div.innerHTML = '<div style="margin-bottom:8px;color:var(--purple);font-weight:600">🤖 AI Generated Test Cases (click to load):</div>' +
+    cases.map((c, i) => `
+      <div class="suggestion" onclick='loadSuggestion(${JSON.stringify(c).replace(/'/g, "&#39;")})'>
+        <span class="s-method method-${(c.method||'GET').toLowerCase()}">${c.method||'GET'}</span>
+        ${escHtml(c.url || '')}
+        <span class="s-desc">${escHtml(c.description || '')}</span>
+      </div>
+    `).join('');
+}
+
+function loadSuggestion(c) {
+  document.getElementById('methodSelect').value = c.method || 'GET';
+  document.getElementById('urlInput').value = c.url || '';
+  setKvData('paramsTable', c.params || {});
+  setKvData('headersTable', c.headers || { 'Content-Type': 'application/json' });
+  document.getElementById('bodyEditor').value = typeof c.body === 'object' ? JSON.stringify(c.body, null, 2) : (c.body || '');
+  document.getElementById('aiSuggestions').style.display = 'none';
+}
+
+// Utility
+function escHtml(s) {
+  if (typeof s !== 'string') s = String(s);
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Keyboard shortcuts
+document.addEventListener('keydown', e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') { e.preventDefault(); sendRequest(); }
+  if (e.key === 'Escape') { document.getElementById('settingsModal').classList.remove('show'); }
+});
+
+init();
+</script>
+</body>
+</html>
