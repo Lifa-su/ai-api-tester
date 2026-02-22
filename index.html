@@ -3,7 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AI API Tester</title>
+<title>AI API Tester - AI-Powered REST API Testing Tool</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🚀</text></svg>">
+<meta name="description" content="AI-powered REST API testing tool. Generate test cases with AI, send HTTP requests, and inspect responses — all in your browser.">
+<meta name="keywords" content="API tester, REST API, HTTP client, AI test generation, DeepSeek, API testing tool">
+<meta property="og:title" content="AI API Tester">
+<meta property="og:description" content="AI-powered REST API testing tool. Generate test cases, send requests, inspect responses.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://lifa-su.github.io/ai-api-tester/">
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 :root{--bg:#1e1e2e;--surface:#2a2a3c;--surface2:#353548;--border:#404060;--text:#cdd6f4;--text2:#a6adc8;--accent:#89b4fa;--accent2:#74c7ec;--green:#a6e3a1;--red:#f38ba8;--yellow:#f9e2af;--orange:#fab387;--purple:#cba6f7;--radius:8px;--shadow:0 2px 8px rgba(0,0,0,0.3)}
@@ -107,12 +114,12 @@ textarea{resize:vertical}
   <button class="settings-btn" onclick="toggleSettings()">⚙️ Settings</button>
 </div>
 <div class="main">
-  <div class="sidebar">
+  <div class="sidebar" role="navigation" aria-label="Request history">
     <div class="sidebar-header">
       <h3>📋 History</h3>
-      <button class="clear-btn" onclick="clearHistory()">Clear All</button>
+      <button class="clear-btn" onclick="clearHistory()" aria-label="Clear all history">Clear All</button>
     </div>
-    <div class="history-list" id="historyList"></div>
+    <div class="history-list" id="historyList" role="list" aria-label="History list"></div>
   </div>
   <div class="content">
     <div class="request-bar">
@@ -134,26 +141,26 @@ textarea{resize:vertical}
     </div>
     <div class="panels">
       <div class="panel">
-        <div class="panel-tabs">
-          <div class="panel-tab active" data-tab="params" onclick="switchReqTab(this)">Params</div>
-          <div class="panel-tab" data-tab="headers" onclick="switchReqTab(this)">Headers</div>
-          <div class="panel-tab" data-tab="body" onclick="switchReqTab(this)">Body</div>
+        <div class="panel-tabs" role="tablist" aria-label="Request configuration">
+          <div class="panel-tab active" data-tab="params" onclick="switchReqTab(this)" role="tab" aria-selected="true" aria-controls="reqParams">Params</div>
+          <div class="panel-tab" data-tab="headers" onclick="switchReqTab(this)" role="tab" aria-selected="false" aria-controls="reqHeaders">Headers</div>
+          <div class="panel-tab" data-tab="body" onclick="switchReqTab(this)" role="tab" aria-selected="false" aria-controls="reqBody">Body</div>
         </div>
-        <div class="panel-content" id="reqParams">
+        <div class="panel-content" id="reqParams" role="tabpanel" aria-label="Query parameters">
           <div class="kv-table" id="paramsTable"></div>
           <button class="add-row-btn" onclick="addKvRow('paramsTable')">+ Add Param</button>
         </div>
-        <div class="panel-content" id="reqHeaders" style="display:none">
+        <div class="panel-content" id="reqHeaders" role="tabpanel" aria-label="Request headers" style="display:none">
           <div class="kv-table" id="headersTable"></div>
           <button class="add-row-btn" onclick="addKvRow('headersTable')">+ Add Header</button>
         </div>
-        <div class="panel-content" id="reqBody" style="display:none">
-          <textarea class="body-editor" id="bodyEditor" placeholder='{"key": "value"}'></textarea>
+        <div class="panel-content" id="reqBody" role="tabpanel" aria-label="Request body" style="display:none">
+          <textarea class="body-editor" id="bodyEditor" placeholder='{"key": "value"}' aria-label="Request body editor"></textarea>
         </div>
       </div>
       <div class="panel">
-        <div class="panel-tabs">
-          <div class="panel-tab active" data-tab="response">Response</div>
+        <div class="panel-tabs" role="tablist" aria-label="Response">
+          <div class="panel-tab active" data-tab="response" role="tab" aria-selected="true">Response</div>
         </div>
         <div id="responseStatus" class="response-status" style="display:none"></div>
         <div class="response-body" id="responseBody">
@@ -187,6 +194,7 @@ textarea{resize:vertical}
 // State
 let history = JSON.parse(localStorage.getItem('api-tester-history') || '[]');
 let settings = JSON.parse(localStorage.getItem('api-tester-settings') || '{}');
+let _suggestionCases = [];
 if (!settings.apiBase) settings.apiBase = 'https://api.deepseek.com';
 if (!settings.model) settings.model = 'deepseek-chat';
 
@@ -231,8 +239,9 @@ function setKvData(tableId, data) {
 
 // Tabs
 function switchReqTab(el) {
-  el.parentElement.querySelectorAll('.panel-tab').forEach(t => t.classList.remove('active'));
+  el.parentElement.querySelectorAll('.panel-tab').forEach(t => { t.classList.remove('active'); t.setAttribute('aria-selected', 'false'); });
   el.classList.add('active');
+  el.setAttribute('aria-selected', 'true');
   const tab = el.dataset.tab;
   document.getElementById('reqParams').style.display = tab === 'params' ? '' : 'none';
   document.getElementById('reqHeaders').style.display = tab === 'headers' ? '' : 'none';
@@ -350,7 +359,7 @@ function renderHistory() {
     return;
   }
   list.innerHTML = history.map((h, i) => `
-    <div class="history-item" onclick="loadHistory(${i})">
+    <div class="history-item" role="listitem" onclick="loadHistory(${i})">
       <span class="method method-${h.method.toLowerCase()}">${h.method}</span>
       <span class="url">${escHtml(h.url)}</span>
       <span class="time">${new Date(h.timestamp).toLocaleString()} · ${h.status} · ${h.time}ms</span>
@@ -436,11 +445,12 @@ Generate 3-5 practical test cases covering normal and edge cases. Return ONLY th
 }
 
 function showSuggestions(cases) {
+  _suggestionCases = cases;
   const div = document.getElementById('aiSuggestions');
   div.style.display = 'block';
   div.innerHTML = '<div style="margin-bottom:8px;color:var(--purple);font-weight:600">🤖 AI Generated Test Cases (click to load):</div>' +
     cases.map((c, i) => `
-      <div class="suggestion" onclick='loadSuggestion(${JSON.stringify(c).replace(/'/g, "&#39;")})'>
+      <div class="suggestion" data-index="${i}">
         <span class="s-method method-${(c.method||'GET').toLowerCase()}">${c.method||'GET'}</span>
         ${escHtml(c.url || '')}
         <span class="s-desc">${escHtml(c.description || '')}</span>
@@ -462,6 +472,14 @@ function escHtml(s) {
   if (typeof s !== 'string') s = String(s);
   return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
+
+// Event delegation for AI suggestions (eliminates inline onclick XSS risk)
+document.getElementById('aiSuggestions').addEventListener('click', function(e) {
+  const el = e.target.closest('.suggestion[data-index]');
+  if (!el) return;
+  const idx = parseInt(el.dataset.index, 10);
+  if (_suggestionCases[idx]) loadSuggestion(_suggestionCases[idx]);
+});
 
 // Keyboard shortcuts
 document.addEventListener('keydown', e => {
